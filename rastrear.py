@@ -7,6 +7,10 @@ app = Flask(__name__)
 
 CLICKS_CSV_PATH = 'cliques_kolmeya.csv'
 
+@app.route('/')
+def home():
+    return "API Flask online! Use /rastrear para rastrear cliques."
+
 @app.route('/rastrear')
 def rastrear():
     chave = request.args.get('chave') or str(uuid.uuid4())
