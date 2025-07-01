@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, send_file
 import csv
 from datetime import datetime
 import uuid
@@ -28,6 +28,15 @@ def rastrear():
     print(f"Clique registrado: chave={chave}, user_id={user_id}, campanha={campanha}, ip={ip}, destino={destino}")
 
     return redirect(destino)
+
+@app.route('/baixar_cliques')
+def baixar_cliques():
+    return send_file(
+        CLICKS_CSV_PATH,
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='cliques_kolmeya.csv'
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 

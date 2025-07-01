@@ -36,11 +36,11 @@ def get_investimento_kolmeya(token, start_at, end_at, limit=30000):
 
 def registrar_clique(user_id, campanha, ip, destino):
     """Registra um clique no arquivo CSV com uma chave única."""
-    chave = str(uuid.uuid4())  # Gera uma chave única
+    chave = str(uuid.uuid4()) 
     with open(CLICKS_CSV_PATH, 'a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow([chave, datetime.now(), user_id, campanha, ip, destino])
-    print(f"Chave gerada para clique: {chave}")  # Exibe a chave no terminal
+    print(f"Chave gerada para clique: {chave}")  
     return chave
 
 def ler_cliques():
