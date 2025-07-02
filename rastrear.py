@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, send_file
+from flask import Flask, request, redirect, send_file, jsonify
 import csv
 from datetime import datetime
 import uuid
@@ -37,6 +37,16 @@ def baixar_cliques():
         as_attachment=True,
         download_name='cliques_kolmeya.csv'
     )
+
+@app.route('/cliques_kolmeya')
+def cliques_kolmeya():
+    try:
+        with open(CLICKS_CSV_PATH, 'r', encoding='utf-8') as f:
+            linhas = f.readlines()
+        total_cliques = len(linhas) - 1 if linhas and linhas[0].startswith('chave') else len(linhas)
+    except Exception as e:
+        total_cliques = 0
+    return jsonify({'total_cliques': total_cliques})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
