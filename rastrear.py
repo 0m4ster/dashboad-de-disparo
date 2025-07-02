@@ -46,16 +46,17 @@ def cliques_kolmeya():
         # Pula o cabeçalho se existir
         if linhas and linhas[0].startswith('chave'):
             linhas = linhas[1:]
-        ips = set()
+        combinacoes = set()
         for linha in linhas:
             partes = linha.strip().split(',')
             if len(partes) >= 5:
+                user_id = partes[2].strip()
                 ip = partes[4].strip()
-                ips.add(ip)
-        total_ips_unicos = len(ips)
+                combinacoes.add((ip, user_id))
+        total_unicos = len(combinacoes)
     except Exception as e:
-        total_ips_unicos = 0
-    return jsonify({'total_cliques_unicos_ip': total_ips_unicos})
+        total_unicos = 0
+    return jsonify({'total_cliques_unicos_ip_user': total_unicos})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
