@@ -54,9 +54,14 @@ def cliques_kolmeya():
                 ip = partes[4].strip()
                 combinacoes.add((ip, user_id))
         total_unicos = len(combinacoes)
+        total_cliques = len(linhas)
     except Exception as e:
         total_unicos = 0
-    return jsonify({'total_cliques_unicos_ip_user': total_unicos})
+        total_cliques = 0
+    return jsonify({
+        'total_cliques_unicos_ip_user': total_unicos,
+        'total_cliques': total_cliques
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
