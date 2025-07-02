@@ -43,10 +43,19 @@ def cliques_kolmeya():
     try:
         with open(CLICKS_CSV_PATH, 'r', encoding='utf-8') as f:
             linhas = f.readlines()
-        total_cliques = len(linhas) - 1 if linhas and linhas[0].startswith('chave') else len(linhas)
+        # Pula o cabeçalho se existir
+        if linhas and linhas[0].startswith('chave'):
+            linhas = linhas[1:]
+        ips = set()
+        for linha in linhas:
+            partes = linha.strip().split(',')
+            if len(partes) >= 5:
+                ip = partes[4].strip()
+                ips.add(ip)
+        total_ips_unicos = len(ips)
     except Exception as e:
-        total_cliques = 0
-    return jsonify({'total_cliques': total_cliques})
+        total_ips_unicos = 0
+    return jsonify({'total_cliques_unicos_ip': total_ips_unicos})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
