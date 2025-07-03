@@ -5,6 +5,7 @@ from kolmeya_api import get_investimento_kolmeya
 import locale
 import datetime
 import requests
+from streamlit_autorefresh import st_autorefresh
 
 CSV_PATH = 'dados_dashboard.csv'
 
@@ -82,6 +83,21 @@ def renderizar_tabela(df):
 
 def formatar_moeda_brasileira(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def calcular_producao_kolmeya(data_inicio, data_fim):
+    try:
+        df_prod = pd.read_csv('producao_kolmeya.csv')
+        df_prod['data_venda'] = pd.to_datetime(df_prod['data_venda'])
+        mask = (
+            (df_prod['canal'].str.upper() == 'KOLMEYA') &
+            (df_prod['status_venda'].str.lower() == 'vendido') &
+            (df_prod['data_venda'] >= pd.to_datetime(data_inicio)) &
+            (df_prod['data_venda'] <= pd.to_datetime(data_fim))
+        )
+        return df_prod[mask].shape[0]
+    except Exception as e:
+        st.warning(f"Erro ao calcular produção Kolmeya: {e}")
+        return 0
 
 # Configuração da página e estilos
 st.set_page_config(page_title="DASHBOARD SERVCRED", layout="wide")
@@ -170,6 +186,14 @@ hoje = datetime.date.today()
 data_inicio = st.date_input("Data início", value=hoje, key="data_inicio")
 data_fim = st.date_input("Data fim", value=hoje + datetime.timedelta(days=7), key="data_fim")
 
+# Ajuste para evitar erro de data futura na API
+agora = datetime.datetime.now()
+if data_fim == hoje:
+    hora_final = agora.strftime("%H:%M")
+    data_fim_str = f"{data_fim} {hora_final}"
+else:
+    data_fim_str = f"{data_fim} 23:59"
+
 # Consulta API
 valor = None
 erro_api = None
@@ -182,7 +206,7 @@ try:
     valor = get_investimento_kolmeya(
         KOLMEYA_TOKEN,
         f"{data_inicio} 00:00",
-        f"{data_fim} 00:00"
+        data_fim_str
     )
     if isinstance(valor, dict) and "valor" in valor:
         valor = valor["valor"]
@@ -208,24 +232,41 @@ def obter_total_cliques_kolmeya():
     try:
         resp = requests.get('https://dashboad-de-disparo.onrender.com/cliques_kolmeya')
         if resp.status_code == 200:
-            return resp.json().get('total_cliques_unicos_ip', 0)
+            data = resp.json()
+            total_unicos = data.get('total_cliques_unicos_ip_user', 0)
+            total_geral = data.get('total_cliques', 0)
+            return total_unicos, total_geral
     except Exception as e:
         st.warning(f"Erro ao buscar cliques Kolmeya: {e}")
-    return 0
+    return 0, 0
 
 # Atualiza QUANT/LEADS da KOLMEYA antes de renderizar a tabela
 if st.button("Atualizar cliques Kolmeya"):
-    cliques_kolmeya = obter_total_cliques_kolmeya()
-    atualizar_valor_df("KOLMEYA", "QUANT/LEADS", cliques_kolmeya)
+    cliques_unicos, cliques_geral = obter_total_cliques_kolmeya()
+    atualizar_valor_df("KOLMEYA", "QUANT/LEADS", cliques_geral)
     df = carregar_df()
     st.success("Quantidade de cliques atualizada!")
 else:
-    cliques_kolmeya = obter_total_cliques_kolmeya()
-    atualizar_valor_df("KOLMEYA", "QUANT/LEADS", cliques_kolmeya)
+    cliques_unicos, cliques_geral = obter_total_cliques_kolmeya()
+    atualizar_valor_df("KOLMEYA", "QUANT/LEADS", cliques_geral)
     df = carregar_df()
+
+# Preenche QUANT/LEADS da linha KOLMEYA com o total de cliques geral
+idx_kolmeya = df[df['Canal'].str.upper() == 'KOLMEYA'].index
+if len(idx_kolmeya) > 0:
+    df.at[idx_kolmeya[0], 'QUANT/LEADS'] = cliques_geral
+
+# Calcula produção Kolmeya
+producao_kolmeya = calcular_producao_kolmeya(data_inicio, data_fim)
+if len(idx_kolmeya) > 0:
+    df.at[idx_kolmeya[0], 'PRODUÇÃO'] = producao_kolmeya
 
 # Renderiza a tabela
 renderizar_tabela(df)
+
+# Exibe ambos os valores de cliques
+st.metric("Cliques únicos Kolmeya", cliques_unicos)
+st.metric("Total de cliques Kolmeya", cliques_geral)
 
 # Esconde menus do Streamlit
 hide_streamlit_style = """
@@ -265,4 +306,7 @@ elif isinstance(valor, dict) and "messages" in valor:
         st.dataframe(pd.DataFrame(valor["messages"]))
 else:
     st.info("Nenhum valor retornado para o período selecionado ou valor inesperado.")
+
+# Adiciona auto-refresh a cada 30 segundos
+st_autorefresh(interval=30 * 1000, key="datarefresh")
 
